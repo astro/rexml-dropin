@@ -1,3 +1,5 @@
+require 'rexml-dropin/attribute'
+
 module REXML
   class Attributes
     def initialize(arg0=nil)
@@ -27,7 +29,9 @@ module REXML
     end
 
     def each_attribute(&block)
-      @attributes.each &block
+      @attributes.each do |attr|
+        block.call Attribute.new(attr)
+      end
     end
   end
 end

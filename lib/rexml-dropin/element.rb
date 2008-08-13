@@ -1,4 +1,5 @@
 require 'rexml-dropin/attributes'
+require 'rexml-dropin/attribute'
 
 module REXML
   class Element
@@ -30,8 +31,11 @@ module REXML
     end
 
     def add(child)
-      element = Element.new(child)
-      Element.new @node.child_add(element.node.copy(true))
+      node = Element.new(child).node
+      if node.parent?
+        node = node.copy(true)
+      end
+      Element.new @node.child_add(node)
     end
     alias :add_element :add
 
@@ -88,30 +92,32 @@ module REXML
       end
     end
 
-    ##
-    # Returns a LibXML::XML::Attr because it has #name and #value too
     def attribute(name, namespace=nil)
       unless namespace
-        @node.attributes.get_attribute(name)
+        Attribute.new @node.attributes.get_attribute(name)
       else
-        @node.attributes.get_attribute_ns(namespace, name)
+        Attribute.new @node.attributes.get_attribute_ns(namespace, name)
       end
     end
 
     def each_attribute(&block)
-      @node.attributes.each &block
+      @node.attributes.each do |attr|
+        block.call Attribute.new(attr)
+      end
     end
 
     def add_namespace(prefix, uri=nil)
       unless uri
-        @node.namespace = LibXML::XML::NS.new(@node, prefix || '', '')
+        puts "Passing #{prefix.inspect}"
+        @node.namespace = prefix
       else
         LibXML::XML::NS.new(@node, uri, prefix)
       end
     end
 
     def text
-      @node.content
+      t = @node.content
+      t.empty? ? nil : t
     end
 
     def text=(text)
