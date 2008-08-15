@@ -161,9 +161,8 @@ module REXML
     end
 
     def namespace(prefix=nil)
-      prefix ||= ''
       (@node.ns || []).each do |ns|
-        if ns.prefix.to_s == prefix
+        if ns.prefix == prefix
           return ns.href
         end
       end
