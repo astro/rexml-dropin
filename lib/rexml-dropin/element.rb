@@ -14,7 +14,7 @@ module REXML
       if args.size == 1 and
           args[0].kind_of? LibXML::XML::Node and
           args[0].instance_variable_defined? :@instance
-        puts "Reviving instance #{args[0].instance_variable_get(:@instance).inspect}"
+        #puts "Reviving instance #{args[0].instance_variable_get(:@instance).inspect}"
         args[0].instance_variable_get :@instance
       else
         super
@@ -48,12 +48,17 @@ module REXML
       Element.new(@node.copy(true))
     end
 
+    def inspect
+      "#{to_s}:#{self.class}"
+    end
+
     def add(child)
-      node = Element.new(child).node
-      if node.parent?
-        node.remove!
+      element = child.kind_of?(Element) ? child : Element.new(child)
+      if element.node.parent?
+        element.node.remove!
       end
-      Element.new @node.child_add(node)
+      @node.child_add(element.node)
+      element
     end
     alias :add_element :add
 
