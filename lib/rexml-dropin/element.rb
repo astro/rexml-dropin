@@ -6,6 +6,21 @@ module REXML
     attr_reader :node
     attr_accessor :context # dummy
 
+    ##
+    # The @instance injected into the @node serves for preserving
+    # classes and objects when custom REXML::Element-derived classes
+    # are added as children and later retrieved.
+    def Element.new(*args)
+      if args.size == 1 and
+          args[0].kind_of? LibXML::XML::Node and
+          args[0].instance_variable_defined? :@instance
+        puts "Reviving instance #{args[0].instance_variable_get(:@instance).inspect}"
+        args[0].instance_variable_get :@instance
+      else
+        super
+      end
+    end
+
     def initialize(arg0)
       if arg0.kind_of? LibXML::XML::Node
         @node = arg0
@@ -16,6 +31,9 @@ module REXML
       else
         raise "Unsupported Element initializer: #{arg0.inspect}"
       end
+
+      raise 'Shalt not happen!' if instance_variable_defined? :@instance
+      @node.instance_variable_set(:@instance, self)
 
       # HACK: make monkeypatches happy
       @name = @node.name
@@ -94,10 +112,11 @@ module REXML
 
     def attribute(name, namespace=nil)
       unless namespace
-        Attribute.new @node.attributes.get_attribute(name)
+        attr = @node.attributes.get_attribute(name)
       else
-        Attribute.new @node.attributes.get_attribute_ns(namespace, name)
+        attr = @node.attributes.get_attribute_ns(namespace, name)
       end
+      attr ? Attribute.new(attr) : nil
     end
 
     def each_attribute(&block)
@@ -107,12 +126,10 @@ module REXML
     end
 
     def add_namespace(prefix, uri=nil)
-      unless uri
-        puts "Passing #{prefix.inspect}"
-        @node.namespace = prefix
-      else
-        LibXML::XML::NS.new(@node, uri, prefix)
-      end
+      prefix ||= ''
+      uri, prefix = prefix, nil unless uri
+
+      LibXML::XML::NS.new(@node, uri, prefix)
     end
 
     def text
@@ -126,17 +143,22 @@ module REXML
       end
 
       add_text text
+
+      text
     end
 
     def add_text(text)
       if text
         @node.child_add LibXML::XML::Node::new_text(text)
       end
+
+      self
     end
 
-    def namespace(prefix='')
+    def namespace(prefix=nil)
+      prefix ||= ''
       (@node.ns || []).each do |ns|
-        if ns.prefix == prefix
+        if ns.prefix.to_s == prefix
           return ns.href
         end
       end
