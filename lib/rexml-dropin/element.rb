@@ -7,6 +7,10 @@ module REXML
     attr_accessor :context # dummy
 
     ##
+    # Constructor functions
+    ##
+
+    ##
     # The @instance injected into the @node serves for preserving
     # classes and objects when custom REXML::Element-derived classes
     # are added as children and later retrieved.
@@ -40,17 +44,13 @@ module REXML
       @context = nil
     end
 
-    def name
-      @node.name
-    end
-
     def deep_clone
       Element.new(@node.copy(true))
     end
 
-    def inspect
-      "#{to_s}:#{self.class}"
-    end
+    ##
+    # Children functoins
+    ##
 
     def add(child)
       element = child.kind_of?(Element) ? child : Element.new(child)
@@ -96,6 +96,10 @@ module REXML
       end
     end
 
+    ##
+    # Attribute functions
+    ##
+
     def attributes
       Attributes.new @node.attributes
     end
@@ -130,12 +134,9 @@ module REXML
       end
     end
 
-    def add_namespace(prefix, uri=nil)
-      prefix ||= ''
-      uri, prefix = prefix, nil unless uri
-
-      LibXML::XML::NS.new(@node, uri, prefix)
-    end
+    ##
+    # Text content
+    ##
 
     def text
       t = @node.content
@@ -160,6 +161,17 @@ module REXML
       self
     end
 
+    ##
+    # Namespace functions
+    ##
+
+    def add_namespace(prefix, uri=nil)
+      prefix ||= ''
+      uri, prefix = prefix, nil unless uri
+
+      LibXML::XML::NS.new(@node, uri, prefix)
+    end
+
     def namespace(prefix=nil)
       (@node.ns || []).each do |ns|
         if ns.prefix == prefix
@@ -178,6 +190,16 @@ module REXML
     end
 
     ##
+    # Serialization
+    ##
+
+    def name
+      @node.name
+    end
+    # When name= is being implemented, watch out for @name instance
+    # variable!
+
+    ##
     # Only first argument used for now
     def write( output=$stdout, indent=-1, trans=false, ie_hack=false )
       output << to_s
@@ -186,5 +208,10 @@ module REXML
     def to_s
       @node.to_s
     end
+
+    def inspect
+      "#{to_s}:#{self.class}"
+    end
+
   end
 end
