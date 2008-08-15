@@ -74,10 +74,11 @@ module REXML
     alias :each_element :each
 
     ##
-    # expr: only element name for now
-    def delete_element(expr=nil)
+    # expr: only element name or instance for now
+    def delete_element(what=nil)
       @node.each_element do |node|
-        if expr.nil? or node.name == expr
+        if what.nil? or node.name == what or
+            (what.kind_of? Element and what.node == node)
           node.remove!
         end
       end
@@ -155,7 +156,7 @@ module REXML
 
     def add_text(text)
       if text
-        @node.child_add LibXML::XML::Node::new_text(text)
+        @node.child_add LibXML::XML::Node::new_text(text.to_s)
       end
 
       self
@@ -166,7 +167,9 @@ module REXML
     ##
 
     def add_namespace(prefix, uri=nil)
-      prefix ||= ''
+      # Avoid adding no namespace as empty namespace:
+      return unless prefix
+      # Add default namespace:
       uri, prefix = prefix, nil unless uri
 
       LibXML::XML::NS.new(@node, uri, prefix)
@@ -175,16 +178,28 @@ module REXML
     def namespace(prefix=nil)
       (@node.ns || []).each do |ns|
         if ns.prefix == prefix
+          #puts "Returning #{ns.href.inspect} from #{inspect}"
           return ns.href
         end
       end
       ''
+=begin
+      # None found? Try parent
+      puts "Going up from #{inspect}"
+      if @node.parent
+        Element.new(@node.parent).namespace prefix
+      else
+        ''
+      end
+=end
     end
 
+    # TODO: collect from parent
     def namespaces
       (@node.ns || []).collect { |ns| ns.href }
     end
 
+    # TODO: collect from parent
     def prefixes
       (@node.ns || []).collect { |ns| ns.prefix }
     end
