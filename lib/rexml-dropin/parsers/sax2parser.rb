@@ -1,3 +1,5 @@
+require 'rexml-dropin/parseexception'
+
 module REXML
   module Parsers
     class SAX2Parser
@@ -10,11 +12,15 @@ module REXML
       def parse
         if @source.kind_of? String
           @parser.string = @source
-          @parser.parse
+          unless @parser.parse
+            raise ParseException.new
+          end
         elsif @source.respond_to? :read
           while buf = @source.readline('>')
             @parser.string = buf
-            @parser.parse
+            unless @parser.parse
+              raise ParseException.new
+            end
           end
         else
           raise "Unsupported source: #{@source.inspect}"
