@@ -33,7 +33,7 @@ module REXML
     def add(child)
       node = Element.new(child).node
       if node.parent?
-        node = node.copy(true)
+        node.remove!
       end
       Element.new @node.child_add(node)
     end
