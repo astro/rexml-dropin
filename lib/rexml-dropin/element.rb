@@ -1,5 +1,7 @@
 require 'rexml-dropin/attributes'
 require 'rexml-dropin/attribute'
+require 'rexml-dropin/text'
+require 'rexml-dropin/cdata'
 
 module REXML
   class Element
@@ -53,12 +55,18 @@ module REXML
     ##
 
     def add(child)
-      element = child.kind_of?(Element) ? child : Element.new(child)
-      if element.node.parent?
-        element.node.remove!
+      if child.kind_of? CData
+        add_cdata child
+      elsif child.kind_of? Text
+        add_text child
+      else
+        element = child.kind_of?(Element) ? child : Element.new(child)
+        if element.node.parent?
+          element.node.remove!
+        end
+        @node.child_add(element.node)
+        element
       end
-      @node.child_add(element.node)
-      element
     end
     alias :add_element :add
 
@@ -97,6 +105,10 @@ module REXML
       end
     end
 
+    def parent
+      @node.parent ? Element.new(@node.parent) : nil
+    end
+
     ##
     # Attribute functions
     ##
@@ -110,12 +122,15 @@ module REXML
     end
 
     def add_attributes(attributes)
-      attributes = attributes.to_a if attributes.kind_of? Hash
       attributes.each do |*attribute|
         if attribute.size > 1
           add_attribute attribute[0], attribute[1]
-        else
+        elsif attribute[0].kind_of? Attribute
           add_attribute attribute[0].name, attribute[0].value
+        elsif attribute[0].kind_of? Array
+          add_attribute attribute[0][0], attribute[0][1]
+        else
+          raise "Invalid attribute: #{attribute.inspect}"
         end
       end
     end
@@ -163,6 +178,24 @@ module REXML
     end
 
     ##
+    # Cdata content
+    ##
+
+    def cdatas
+      r = []
+      @node.each do |child|
+        if child.node_type == LibXML::XML::Node::CDATA_SECTION_NODE
+          r << CData.new(child.content)
+        end
+      end
+      r
+    end
+
+    def add_cdata(text)
+      @node.child_add LibXML::XML::Node::new_cdata(text.to_s)
+      self
+    end
+    ##
     # Namespace functions
     ##
 
@@ -209,10 +242,21 @@ module REXML
     ##
 
     def name
-      @node.name
+      prefix, name = @node.name.split(':', 2)
+      name ? name : prefix
     end
     # When name= is being implemented, watch out for @name instance
     # variable!
+
+    # You are doing it wrong.
+    def prefix
+      prefix, name = @node.name.split(':', 2)
+      name ? prefix : nil
+    end
+
+    def whitespace
+      nil
+    end
 
     ##
     # Only first argument used for now

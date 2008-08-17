@@ -1,29 +1,34 @@
 require 'rexml-dropin/parseexception'
+require 'xml/parser'
 
 module REXML
   module Parsers
-    class SAX2Parser
+    class SAX2Parser < XML::Parser
       def initialize(source)
         @source = source
         @listeners = []
-        @parser = LibXML::XML::SaxParser.new
+        @in_cdata = false
+        super('UTF-8')
       end
 
       def parse
-        if @source.kind_of? String
-          @parser.string = @source
-          unless @parser.parse
-            raise ParseException.new
-          end
-        elsif @source.respond_to? :read
-          while buf = @source.readline('>')
-            @parser.string = buf
-            unless @parser.parse
-              raise ParseException.new
+        begin
+          if @source.kind_of? String
+            puts "Parsing #{@source.inspect}"
+            super @source
+          elsif @source.respond_to? :read
+            while buf = @source.readline('>')
+              super buf
             end
+          else
+            raise "Unsupported source: #{@source.inspect}"
           end
-        else
-          raise "Unsupported source: #{@source.inspect}"
+        rescue XMLParserError => e
+          if e.to_s == 'no element found'
+            # ignore this
+          else
+            raise ParseException.new(e.to_s)
+          end
         end
       end
 
@@ -41,37 +46,34 @@ module REXML
         end
       end
 
-      include LibXML::XML::SaxParser::Callbacks
-
-
-      def on_start_document
-      end
-
-      def on_start_element(name, attr_hash)
+      def startElement(name, attr_hash)
         call_listeners(:start_element, nil, name, name, attr_hash)
       end
       
-      def on_characters(chars)
-        call_listeners(:characters, chars)
-      end
-      
-      def on_comment(msg)
-      end
-      
-      def on_processing_instruction(target, data)
-      end
-      
-      def on_cdata_block(cdata)
-        call_listeners(:cdata, cdata)
-      end
-      
-      def on_end_element(name)
+      def endElement(name)
         call_listeners(:end_element, nil, name, name)
       end
       
-      def on_end_document
+      def character(chars)
+        if @in_cdata
+          call_listeners(:cdata, chars)
+        else
+          call_listeners(:characters, chars)
+        end
       end
-      
+
+      def startCdata
+        @in_cdata = true
+      end
+
+      def endCdata
+        @in_cdata = false
+      end
+
+      def unknownEncoding(e)
+        XML::Encoding.new
+      end
+  
     end
   end
 end
