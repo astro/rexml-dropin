@@ -118,7 +118,13 @@ module REXML
     end
 
     def add_attribute(name, value)
-      attributes[name] = value
+      if name == 'xmlns'
+        add_namespace value
+      elsif name == /^xmlns:(.+)$/
+        add_namespace $1, value
+      else
+        attributes[name] = value
+      end
     end
 
     def add_attributes(attributes)
