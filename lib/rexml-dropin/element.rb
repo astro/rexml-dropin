@@ -233,6 +233,15 @@ module REXML
 =end
     end
 
+    def delete_namespace(prefix=nil)
+      (@node.ns || []).each { |ns|
+        if ns.prefix == prefix
+          # Is not implemented:
+          #ns.remove!
+        end
+      }
+    end
+
     # TODO: collect from parent
     def namespaces
       (@node.ns || []).collect { |ns| ns.href }
