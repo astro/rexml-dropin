@@ -4,11 +4,17 @@ require 'xml/parser'
 module REXML
   module Parsers
     class SAX2Parser < XML::Parser
+      def SAX2Parser.new(source)
+        o = super('UTF-8')
+        o.instance_eval { initialize source }
+        o
+      end
+
       def initialize(source)
         @source = source
         @listeners = []
         @in_cdata = false
-        super('UTF-8')
+        super()
       end
 
       def parse
