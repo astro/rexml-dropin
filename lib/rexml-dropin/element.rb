@@ -5,7 +5,7 @@ require 'rexml-dropin/cdata'
 
 module REXML
   class Element
-    attr_reader :node
+    attr_reader :libxml_node
     attr_accessor :context # dummy
 
     ##
@@ -29,25 +29,25 @@ module REXML
 
     def initialize(arg0)
       if arg0.kind_of? LibXML::XML::Node
-        @node = arg0
+        @libxml_node = arg0
       elsif arg0.kind_of? Element
-        @node = arg0.node
+        @libxml_node = arg0.libxml_node
       elsif arg0.kind_of? String
-        @node = LibXML::XML::Node::new_element(arg0)
+        @libxml_node = LibXML::XML::Node::new_element(arg0)
       else
         raise "Unsupported Element initializer: #{arg0.inspect}"
       end
 
       raise 'Shalt not happen!' if instance_variable_defined? :@instance
-      @node.instance_variable_set(:@instance, self)
+      @libxml_node.instance_variable_set(:@instance, self)
 
       # HACK: make monkeypatches happy
-      @name = @node.name
+      @name = @libxml_node.name
       @context = nil
     end
 
     def deep_clone
-      Element.new(@node.copy(true))
+      Element.new(@libxml_node.copy(true))
     end
 
     ##
@@ -61,10 +61,10 @@ module REXML
         add_text child
       else
         element = child.kind_of?(Element) ? child : Element.new(child)
-        if element.node.parent?
-          element.node.remove!
+        if element.libxml_node.parent?
+          element.libxml_node.remove!
         end
-        @node.child_add(element.node)
+        @libxml_node.child_add(element.libxml_node)
         element
       end
     end
@@ -73,7 +73,7 @@ module REXML
     ##
     # expr: only element name for now
     def each(expr=nil, &block)
-      @node.each_element do |node|
+      @libxml_node.each_element do |node|
         if expr.nil? or node.name == expr
           block.call Element.new(node)
         end
@@ -84,7 +84,7 @@ module REXML
     ##
     # expr: only element name or instance for now
     def delete_element(what=nil)
-      @node.each_element do |node|
+      @libxml_node.each_element do |node|
         if what.nil? or node.name == what or
             (what.kind_of? Element and what.node == node)
           node.remove!
@@ -93,7 +93,7 @@ module REXML
     end
 
     def children
-      @node.children.collect do |child|
+      @libxml_node.children.collect do |child|
         case child.node_type
         when LibXML::XML::Node::ELEMENT_NODE
           Element.new(child)
@@ -106,7 +106,7 @@ module REXML
     end
 
     def parent
-      @node.parent ? Element.new(@node.parent) : nil
+      @libxml_node.parent ? Element.new(@libxml_node.parent) : nil
     end
 
     ##
@@ -114,7 +114,7 @@ module REXML
     ##
 
     def attributes
-      Attributes.new @node.attributes
+      Attributes.new @libxml_node.attributes
     end
 
     def add_attribute(name, value)
@@ -143,15 +143,15 @@ module REXML
 
     def attribute(name, namespace=nil)
       unless namespace
-        attr = @node.attributes.get_attribute(name)
+        attr = @libxml_node.attributes.get_attribute(name)
       else
-        attr = @node.attributes.get_attribute_ns(namespace, name)
+        attr = @libxml_node.attributes.get_attribute_ns(namespace, name)
       end
       attr ? Attribute.new(attr) : nil
     end
 
     def each_attribute(&block)
-      @node.attributes.each do |attr|
+      @libxml_node.attributes.each do |attr|
         block.call Attribute.new(attr)
       end
     end
@@ -161,12 +161,12 @@ module REXML
     ##
 
     def text
-      t = @node.content
+      t = @libxml_node.content
       t.empty? ? nil : t
     end
 
     def text=(text)
-      @node.each do |node|
+      @libxml_node.each do |node|
         node.remove! if node.node_type == LibXML::XML::Node::TEXT_NODE
       end
 
@@ -177,7 +177,7 @@ module REXML
 
     def add_text(text)
       if text
-        @node.child_add LibXML::XML::Node::new_text(text.to_s)
+        @libxml_node.child_add LibXML::XML::Node::new_text(text.to_s)
       end
 
       self
@@ -189,7 +189,7 @@ module REXML
 
     def cdatas
       r = []
-      @node.each do |child|
+      @libxml_node.each do |child|
         if child.node_type == LibXML::XML::Node::CDATA_SECTION_NODE
           r << CData.new(child.content)
         end
@@ -198,7 +198,7 @@ module REXML
     end
 
     def add_cdata(text)
-      @node.child_add LibXML::XML::Node::new_cdata(text.to_s)
+      @libxml_node.child_add LibXML::XML::Node::new_cdata(text.to_s)
       self
     end
     ##
@@ -211,11 +211,11 @@ module REXML
       # Add default namespace:
       uri, prefix = prefix, nil unless uri
 
-      LibXML::XML::NS.new(@node, uri, prefix)
+      LibXML::XML::NS.new(@libxml_node, uri, prefix)
     end
 
     def namespace(prefix=nil)
-      (@node.ns || []).each do |ns|
+      (@libxml_node.ns || []).each do |ns|
         if ns.prefix == prefix
           #puts "Returning #{ns.href.inspect} from #{inspect}"
           return ns.href
@@ -225,8 +225,8 @@ module REXML
 =begin
       # None found? Try parent
       puts "Going up from #{inspect}"
-      if @node.parent
-        Element.new(@node.parent).namespace prefix
+      if @libxml_node.parent
+        Element.new(@libxml_node.parent).namespace prefix
       else
         ''
       end
@@ -234,22 +234,24 @@ module REXML
     end
 
     def delete_namespace(prefix=nil)
-      (@node.ns || []).each { |ns|
+=begin
+      (@libxml_node.ns || []).each { |ns|
         if ns.prefix == prefix
           # Is not implemented:
-          #ns.remove!
+          ns.remove!
         end
       }
+=end
     end
 
     # TODO: collect from parent
     def namespaces
-      (@node.ns || []).collect { |ns| ns.href }
+      (@libxml_node.ns || []).collect { |ns| ns.href }
     end
 
     # TODO: collect from parent
     def prefixes
-      (@node.ns || []).collect { |ns| ns.prefix }
+      (@libxml_node.ns || []).collect { |ns| ns.prefix }
     end
 
     ##
@@ -257,7 +259,7 @@ module REXML
     ##
 
     def name
-      prefix, name = @node.name.split(':', 2)
+      prefix, name = @libxml_node.name.split(':', 2)
       name ? name : prefix
     end
     # When name= is being implemented, watch out for @name instance
@@ -265,7 +267,7 @@ module REXML
 
     # You are doing it wrong.
     def prefix
-      prefix, name = @node.name.split(':', 2)
+      prefix, name = @libxml_node.name.split(':', 2)
       name ? prefix : nil
     end
 
@@ -280,7 +282,7 @@ module REXML
     end
 
     def to_s
-      @node.to_s
+      @libxml_node.to_s
     end
 
     def inspect
