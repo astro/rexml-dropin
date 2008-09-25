@@ -8,10 +8,10 @@ module Kernel
 
   def require(path)
     if path =~ /^rexml\//
-      #$stderr.puts "REXML drop-in: omitting #{path}"
+      $stderr.puts "REXML drop-in: omitting #{path}"
       false
     else
-      #$stderr.puts "require #{path}"
+      $stderr.puts "require #{path}"
       require_rexml_old path
     end
   end

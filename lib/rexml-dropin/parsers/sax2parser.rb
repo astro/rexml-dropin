@@ -22,29 +22,40 @@ module REXML
           if @source.kind_of? String
             puts "Parsing #{@source.inspect}"
             super @source
-          elsif @source.respond_to? :read
+          elsif @source.respond_to? :readline
             while buf = @source.readline('>')
+              puts "Parse #{buf.inspect}"
               super buf
             end
+            puts "everything from #{@source.inspect}"
           else
             raise "Unsupported source: #{@source.inspect}"
           end
         rescue XMLParserError => e
-          if e.to_s == 'no element found'
+          if e.to_s == 'no element found' ||
+              e.to_s == 'parsing finished'
             # ignore this
+            if @source.respond_to? :readline
+              reset
+              retry
+            end
           else
+            puts "ParseException: #{e.inspect}"
             raise ParseException.new(e.to_s)
           end
         end
+        puts "Parsed"
       end
 
       ##
       # Only with Symbol, not Array for now
       def listen(symbol, &block)
         @listeners << [symbol, block]
+p @listeners
       end
 
       def call_listeners(event, *args)
+        puts "call_listeners(#{event.inspect}, #{args.inspect})"
         @listeners.each do |symbol,block|
           if event == symbol
             block.call(*args)
