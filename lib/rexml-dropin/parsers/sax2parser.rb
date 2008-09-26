@@ -1,57 +1,39 @@
 require 'rexml-dropin/parseexception'
-require 'xml/parser'
 
 module REXML
   module Parsers
-    class SAX2Parser < XML::Parser
-      def SAX2Parser.new(source)
-        o = super('UTF-8')
-        o.instance_eval { initialize source }
-        o
-      end
-
+    class SAX2Parser
       def initialize(source)
         @source = source
         @listeners = []
-        @in_cdata = false
-        super()
+        @parser = LibXML::XML::SaxParser.new_push_parser
+        @parser.callbacks = self
       end
 
       def parse
-        begin
-          if @source.kind_of? String
-            puts "Parsing #{@source.inspect}"
-            super @source
-          elsif @source.respond_to? :readline
-            while buf = @source.readline('>')
-              puts "Parse #{buf.inspect}"
-              super buf
-            end
-            puts "everything from #{@source.inspect}"
-          else
-            raise "Unsupported source: #{@source.inspect}"
+        if @source.kind_of? String
+          @parser.string = @source
+          unless @parser.parse
+            raise ParseException.new
           end
-        rescue XMLParserError => e
-          if e.to_s == 'no element found' ||
-              e.to_s == 'parsing finished'
-            # ignore this
-            if @source.respond_to? :readline
-              reset
-              retry
+        elsif @source.respond_to? :read
+          while buf = @source.readline('>')
+            puts "parsing #{buf.inspect}"
+            @parser.string = buf
+            unless @parser.parse
+              #raise ParseException.new
             end
-          else
-            puts "ParseException: #{e.inspect}"
-            raise ParseException.new(e.to_s)
+            puts "parsed"
           end
+        else
+          raise "Unsupported source: #{@source.inspect}"
         end
-        puts "Parsed"
       end
 
       ##
       # Only with Symbol, not Array for now
       def listen(symbol, &block)
         @listeners << [symbol, block]
-p @listeners
       end
 
       def call_listeners(event, *args)
@@ -63,34 +45,37 @@ p @listeners
         end
       end
 
-      def startElement(name, attr_hash)
+      include LibXML::XML::SaxParser::Callbacks
+
+
+      def on_start_document
+      end
+
+      def on_start_element(name, attr_hash)
         call_listeners(:start_element, nil, name, name, attr_hash)
       end
       
-      def endElement(name)
+      def on_characters(chars)
+        call_listeners(:characters, chars)
+      end
+      
+      def on_comment(msg)
+      end
+      
+      def on_processing_instruction(target, data)
+      end
+      
+      def on_cdata_block(cdata)
+        call_listeners(:cdata, cdata)
+      end
+      
+      def on_end_element(name)
         call_listeners(:end_element, nil, name, name)
       end
       
-      def character(chars)
-        if @in_cdata
-          call_listeners(:cdata, chars)
-        else
-          call_listeners(:characters, chars)
-        end
+      def on_end_document
       end
-
-      def startCdata
-        @in_cdata = true
-      end
-
-      def endCdata
-        @in_cdata = false
-      end
-
-      def unknownEncoding(e)
-        XML::Encoding.new
-      end
-  
+      
     end
   end
 end

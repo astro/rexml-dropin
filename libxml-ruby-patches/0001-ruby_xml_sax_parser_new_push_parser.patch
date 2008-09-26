@@ -1,0 +1,114 @@
+From 7b70b3f4bd2c212c7750ca22f175b1510451825b Mon Sep 17 00:00:00 2001
+From: Stephan Maka <stephan@spaceboyz.net>
+Date: Sat, 27 Sep 2008 00:32:07 +0200
+Subject: [PATCH] ruby_xml_sax_parser_new_push_parser
+
+---
+ ext/libxml/ruby_xml_sax_parser.c |   50 +++++++++++++++++++++++++++++++++++--
+ ext/libxml/ruby_xml_sax_parser.h |    1 +
+ 2 files changed, 48 insertions(+), 3 deletions(-)
+
+diff --git a/ext/libxml/ruby_xml_sax_parser.c b/ext/libxml/ruby_xml_sax_parser.c
+index 26921c6..2515dbf 100644
+--- a/ext/libxml/ruby_xml_sax_parser.c
++++ b/ext/libxml/ruby_xml_sax_parser.c
+@@ -33,6 +33,12 @@ ruby_xml_sax_parser_free(ruby_xml_sax_parser *nodesp) {
+   /* Apparently this isn't needed: time will tell */
+   /* if (nodesp->xsh != NULL) */
+   /* xmlFreeSax_Parser(nodesp->sax_parser); */
++
++  if (nodesp->push_parser && nodesp->xpc)
++  {
++    xmlParseChunk(nodesp->xpc, NULL, 0, 1);
++    xmlFreeParserCtxt(nodesp->xpc);
++  }
+ }
+ 
+ void
+@@ -61,6 +67,7 @@ ruby_xml_sax_parser_new(VALUE class) {
+   ruby_xml_sax_parser *nodesp;
+   
+   nodesp = ALLOC(ruby_xml_sax_parser);
++  nodesp->push_parser = 0;
+   nodesp->xsh = &rubySAXHandlerStruct;
+ 
+   nodesp->callbackHandler = Qnil;  
+@@ -72,6 +79,28 @@ ruby_xml_sax_parser_new(VALUE class) {
+                               ruby_xml_sax_parser_free, nodesp));
+ }
+ 
++/*
++ * call-seq:
++ *    XML::SaxParser.new -> sax_parser
++ * 
++ * Create a new XML::SaxParser instance.
++ */
++VALUE
++ruby_xml_sax_parser_new_push_parser(VALUE class) {
++  ruby_xml_sax_parser *nodesp;
++  
++  nodesp = ALLOC(ruby_xml_sax_parser);
++  nodesp->push_parser = 1;
++  nodesp->xsh = &rubySAXHandlerStruct;
++
++  nodesp->callbackHandler = Qnil;  
++  nodesp->xpc = NULL;
++  nodesp->filename = Qnil;
++  nodesp->str = Qnil;
++
++  return(Data_Wrap_Struct(class, ruby_xml_sax_parser_mark, 
++                              ruby_xml_sax_parser_free, nodesp));
++}
+ 
+ /*
+  * call-seq:
+@@ -154,9 +183,23 @@ ruby_xml_sax_parser_parse(VALUE self) {
+     status = xmlSAXUserParseFile(nodesp->xsh, nodesp, StringValuePtr(nodesp->filename));
+   } else if (nodesp->str != Qnil) {
+     str = StringValuePtr(nodesp->str);
+-    status = //ruby_xml_document_new(cXMLDocument,
+-				   xmlSAXUserParseMemory(nodesp->xsh, nodesp,
+-                 str, strlen(str)); //);
++    if (nodesp->push_parser)
++    {
++      if (!nodesp->xpc)
++      {
++        printf("new push: %s\n", str);
++        status = (nodesp->xpc = xmlCreatePushParserCtxt(nodesp->xsh, nodesp, str, strlen(str), "push.xml")) == NULL;
++      }
++      else
++      {
++        printf("push: %s\n", str);
++        status = xmlParseChunk(nodesp->xpc, str, strlen(str), 0) <= 0;
++      }
++    }
++    else
++      status = //ruby_xml_document_new(cXMLDocument,
++        xmlSAXUserParseMemory(nodesp->xsh, nodesp,
++                              str, strlen(str)); //);
+   }
+   
+   /* XXX This should return an exception for the various error codes
+@@ -417,6 +460,7 @@ ruby_init_xml_sax_parser(void) {
+ 
+   /* SaxParser */
+   rb_define_singleton_method(cXMLSaxParser, "new", ruby_xml_sax_parser_new, 0);
++  rb_define_singleton_method(cXMLSaxParser, "new_push_parser", ruby_xml_sax_parser_new_push_parser, 0);
+ 
+   rb_define_method(cXMLSaxParser, "filename",
+        ruby_xml_sax_parser_filename_get, 0);
+diff --git a/ext/libxml/ruby_xml_sax_parser.h b/ext/libxml/ruby_xml_sax_parser.h
+index 2d20ad0..8593b7a 100644
+--- a/ext/libxml/ruby_xml_sax_parser.h
++++ b/ext/libxml/ruby_xml_sax_parser.h
+@@ -41,6 +41,7 @@ typedef struct ruby_xml_sax_parser_callbacks {
+ */
+ 
+ typedef struct ruby_xml_sax_parser {
++  int push_parser;
+   xmlParserCtxtPtr xpc;
+   xmlSAXHandlerPtr xsh;
+   //ruby_xml_sax_parser_callbacks *cbp;
+-- 
+1.5.6.5
+
