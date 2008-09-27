@@ -21,11 +21,11 @@ module REXML
         begin
           if @source.kind_of? String
             puts "Parsing #{@source.inspect}"
-            super @source
+            super @source, true
           elsif @source.respond_to? :readline
             while buf = @source.readline('>')
               puts "Parse #{buf.inspect}"
-              super buf
+              super buf, false
             end
             puts "everything from #{@source.inspect}"
           else
