@@ -20,42 +20,31 @@ module REXML
       def parse
         begin
           if @source.kind_of? String
-            puts "Parsing #{@source.inspect}"
+            #puts "Parsing #{@source.inspect}"
             super @source, true
           elsif @source.respond_to? :readline
             while buf = @source.readline('>')
-              puts "Parse #{buf.inspect}"
+              #puts "Parse #{buf.inspect}"
               super buf, false
             end
-            puts "everything from #{@source.inspect}"
+            #puts "everything from #{@source.inspect}"
           else
             raise "Unsupported source: #{@source.inspect}"
           end
         rescue XMLParserError => e
-          if e.to_s == 'no element found' ||
-              e.to_s == 'parsing finished'
-            # ignore this
-            if @source.respond_to? :readline
-              reset
-              retry
-            end
-          else
-            puts "ParseException: #{e.inspect}"
-            raise ParseException.new(e.to_s)
-          end
+          raise ParseException.new(e.to_s)
         end
-        puts "Parsed"
+        #puts "Parsed"
       end
 
       ##
       # Only with Symbol, not Array for now
       def listen(symbol, &block)
         @listeners << [symbol, block]
-p @listeners
       end
 
       def call_listeners(event, *args)
-        puts "call_listeners(#{event.inspect}, #{args.inspect})"
+        #puts "call_listeners(#{event.inspect}, #{args.inspect})"
         @listeners.each do |symbol,block|
           if event == symbol
             block.call(*args)
