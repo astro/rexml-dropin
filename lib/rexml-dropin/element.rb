@@ -235,7 +235,7 @@ module REXML
           return ns.href
         end
       end
-      ''
+      nil
 =begin
       # None found? Try parent
       puts "Going up from #{inspect}"
