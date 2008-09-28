@@ -1,0 +1,21 @@
+Are you tired of strange REXML behaviour*? Do you need twice the
+performance when dealing with XML? Are you stuck with the REXML API
+because your code uses it everywhere? You're not alone.
+
+
+This not an offense. I deeply respect Sean Russell's work and the
+amount of time that has went into the project. I won't be able to do
+better, but have had problems more than one time with REXML.
+
+
+In XMPP4R we're bound to the very intuitive REXML API because that's
+what XMPP4R is about: dealing with XML. I thought the only way out
+would be resembling it. That's why I have started REXML-dropin, a
+wrapper around libxml:
+
+http://github.com/astro/rexml-dropin/
+
+
+To be honest, I'm not convinced by libxml-ruby's code, but it looks
+way cleaner than REXML. So far, I'm able to run a basic XMPP client
+with it. There's a lot left to be done, go ahead and fork it.
