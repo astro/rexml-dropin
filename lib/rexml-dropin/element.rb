@@ -72,14 +72,28 @@ module REXML
 
     ##
     # expr: only element name for now
-    def each(expr=nil, &block)
+    def each_element(expr=nil, &block)
       @libxml_node.each_element do |node|
         if expr.nil? or node.name == expr
           block.call Element.new(node)
         end
       end
     end
-    alias :each_element :each
+
+    def each(expr=nil, &block)
+      if expr
+        each_element(expr, &block)
+      else
+        @libxml_node.each do |node|
+          case node.node_type
+          when LibXML::XML::Node::ELEMENT_NODE
+            block.call Element.new(node)
+          when LibXML::XML::Node::TEXT_NODE 
+            block.call Text.new(node.content)
+          end
+        end
+      end
+    end
 
     ##
     # expr: only element name or instance for now
