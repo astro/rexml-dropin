@@ -1,4 +1,4 @@
-Are you tired of strange REXML behaviour*? Do you need twice the
+Are you tired of strange REXML behaviour? Do you need twice the
 performance when dealing with XML? Are you stuck with the REXML API
 because your code uses it everywhere? You're not alone.
 
@@ -19,3 +19,9 @@ http://github.com/astro/rexml-dropin/
 To be honest, I'm not convinced by libxml-ruby's code, but it looks
 way cleaner than REXML. So far, I'm able to run a basic XMPP client
 with it. There's a lot left to be done, go ahead and fork it.
+
+
+Dependencies:
+* libxml-parser-ruby: http://www.yoshidam.net/Ruby.html#xmlparser
+* libxml-ruby beyond 0.8.3/SVN r524: http://libxml.rubyforge.org/
+* require 'rexml' first!
