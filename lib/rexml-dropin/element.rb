@@ -86,7 +86,7 @@ module REXML
     def delete_element(what=nil)
       @libxml_node.each_element do |node|
         if what.nil? or node.name == what or
-            (what.kind_of? Element and what.node == node)
+            (what.kind_of? Element and what.libxml_node == node)
           node.remove!
         end
       end
@@ -262,8 +262,11 @@ module REXML
       prefix, name = @libxml_node.name.split(':', 2)
       name ? name : prefix
     end
-    # When name= is being implemented, watch out for @name instance
-    # variable!
+
+    def name=(s)
+      # TODO: prefix?
+      @libxml_node.name = @name = s
+    end
 
     # You are doing it wrong.
     def prefix
